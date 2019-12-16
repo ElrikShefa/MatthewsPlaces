@@ -13,7 +13,7 @@ struct Place {
     var name: String
     var location: String
     var type: String
-    var image: String
+    var restaurantImage: String
     
     
     static let restaurantNames = [
@@ -27,7 +27,7 @@ struct Place {
         
         var places = [Place]()
         for place in restaurantNames {
-            places.append(Place(name: place, location: "Krasnodar", type: "restaurant", image: place))
+            places.append(Place(name: place, location: "Krasnodar", type: "restaurant", restaurantImage: place))
         }
         return places
     }
