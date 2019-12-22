@@ -9,14 +9,29 @@
 import UIKit
 
 class NewPlaceViewController: UITableViewController {
+
+    var currentPlace: Place?
+    var imageIsChanged = false
+    
+    @IBOutlet var saveButton: UIBarButtonItem!
+    @IBOutlet var placeImage: UIImageView!
+    @IBOutlet var placeType: UITextField!
+    @IBOutlet var placeLocation: UITextField!
+    @IBOutlet var placeName: UITextField!
     
     
-    @IBOutlet var imageOfPlaces: UIImageView!
     override func viewDidLoad() {
         super.viewDidLoad()
+
         // убрали разлиновку
         tableView.tableFooterView = UIView()
+        //отключение кнопки Save
+        saveButton.isEnabled = false
+        //срабатывание Саве при добавлении записи
+        placeName.addTarget(self, action: #selector(textFieldChanged), for: .editingChanged)
+        setupEditScreen()
     }
+  
     
     //MARK: - Table View delegate
     // hiding the keyboard by tapping on cell
@@ -72,6 +87,74 @@ extension NewPlaceViewController: UITextFieldDelegate {
         textField.resignFirstResponder()
         return true
     }
+    
+    @objc private func textFieldChanged() {
+        if placeName.text?.isEmpty == false {
+            saveButton.isEnabled = true
+        } else {
+            saveButton.isEnabled = false
+        }
+    }
+    
+    func savePlace() {
+
+       //replacement for template drawing
+        var image: UIImage?
+        
+        if imageIsChanged {
+            image = placeImage.image
+        } else {
+            image = #imageLiteral(resourceName: "imagePlaceholder")
+        }
+        
+        let imageData = image?.pngData()
+        
+        let newPlace = Place(name: placeName.text!,
+                             location: placeLocation.text,
+                             type: placeType.text,
+                             imageData: imageData)
+        
+        if currentPlace != nil {
+            try! realm.write {
+                currentPlace?.name = newPlace.name
+                currentPlace?.location = newPlace.location
+                currentPlace?.type = newPlace.type
+                currentPlace?.imageData = newPlace.imageData
+            }
+        } else {
+            StorageManager.saveObject(newPlace)
+        }
+    }
+    
+    private func setupEditScreen() {
+        if currentPlace != nil {
+            
+            setupNavigationBar()
+            imageIsChanged = true
+            
+            guard let data = currentPlace?.imageData,
+                let image = UIImage(data: data) else { return }
+            placeImage.image = image
+            placeImage.contentMode = .scaleAspectFill
+            placeName.text = currentPlace?.name
+            placeLocation.text = currentPlace?.location
+            placeType.text = currentPlace?.type
+        }
+    }
+    
+    private func setupNavigationBar() {
+        if let topItem = navigationController?.navigationBar.topItem {
+            topItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+        }
+        navigationItem.leftBarButtonItem = nil
+        title = currentPlace?.name
+        saveButton.isEnabled = true
+    }
+    
+    @IBAction func cancelAction(_ sender: Any) {
+        dismiss(animated: true, completion: nil)
+    }
+    
 }
 
 //MARK: - Work with image
@@ -86,13 +169,16 @@ extension NewPlaceViewController: UIImagePickerControllerDelegate, UINavigationC
             imagePicker.sourceType = source
             present(imagePicker, animated: true)
         }
+        
     }
     //добавление и ред image
     func imagePickerController(_ picker: UIImagePickerController,
                                didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-        imageOfPlaces.image = info[.editedImage] as? UIImage
-        imageOfPlaces.contentMode = .scaleAspectFit
-        imageOfPlaces.clipsToBounds = true
+        placeImage.image = info[.editedImage] as? UIImage
+        placeImage.contentMode = .scaleAspectFit
+        placeImage.clipsToBounds = true
+        
+        imageIsChanged = true
         dismiss(animated: true)
     }
 }
